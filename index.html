@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur Get Next Line (GNL) 🚀</title>
+    <style>
+        /* --- Styles pour une jolie interface --- */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Source+Code+Pro:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #1a1b26;
+            --main-color: #c0caf5;
+            --card-bg: #24283b;
+            --border-color: #414868;
+            --accent-color: #7aa2f7;
+            --green: #9ece6a;
+            --yellow: #e0af68;
+            --red: #f7768e;
+            --font-main: 'Inter', sans-serif;
+            --font-code: 'Source Code Pro', monospace;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--main-color);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .controls, .explanation {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        h1, h2 {
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+        }
+        h1 { font-size: 1.8rem; }
+        h2 { font-size: 1.4rem; }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        textarea, input[type="number"] {
+            width: 100%;
+            padding: 0.8rem;
+            background-color: #16161e;
+            border: 1px solid var(--border-color);
+            color: var(--main-color);
+            border-radius: 8px;
+            font-family: var(--font-code);
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 150px;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        button {
+            flex-grow: 1;
+            padding: 0.8rem 1rem;
+            font-family: var(--font-main);
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #fff;
+        }
+
+        #btn-gnl {
+            background-color: var(--accent-color);
+        }
+        #btn-gnl:hover {
+            background-color: #5d83d1;
+        }
+
+        #btn-reset {
+            background-color: #565f89;
+        }
+        #btn-reset:hover {
+            background-color: #414868;
+        }
+        
+        #btn-gnl:disabled {
+            background-color: #3b4261;
+            cursor: not-allowed;
+        }
+
+        /* --- Zone de visualisation --- */
+        .visual-box {
+            background-color: #16161e;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            min-height: 60px;
+            font-family: var(--font-code);
+            white-space: pre-wrap;
+            word-break: break-all;
+            transition: all 0.3s;
+        }
+        
+        .visual-box h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--main-color);
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+        
+        .visual-box pre {
+            margin: 0;
+            padding: 0;
+            font-size: 1.1rem;
+        }
+        
+        /* Styles pour les animations */
+        #file-display span {
+            transition: background-color 0.5s, color 0.5s;
+        }
+        .read-char {
+            background-color: var(--yellow);
+            color: var(--bg-color);
+            border-radius: 3px;
+        }
+        .stash-char {
+             background-color: var(--red);
+             color: var(--bg-color);
+             border-radius: 3px;
+        }
+        .returned-char {
+            background-color: var(--green);
+            color: var(--bg-color);
+            border-radius: 3px;
+        }
+
+        #result-display {
+            font-weight: bold;
+            color: var(--green);
+            font-size: 1.2rem;
+            min-height: 30px;
+        }
+        #result-display.null {
+            color: var(--red);
+        }
+        
+        .nl-char {
+            background-color: rgba(122, 162, 247, 0.3);
+            display: inline-block;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="controls">
+            <h1>Simulateur GNL 🚀</h1>
+            <p>Cet outil simule `get_next_line` pour t'aider à comprendre comment ça marche, étape par étape.</p>
+            
+            <div class="control-group">
+                <label for="text-content">Contenu du "Fichier"</label>
+                <textarea id="text-content">Ligne 1 simple.
+Ligne 2 est un peu plus longue pour tester.
+Ligne 3.
+Et la dernière ligne sans newline final</textarea>
+            </div>
+
+            <div class="control-group">
+                <label for="buffer-size">BUFFER_SIZE</label>
+                <input type="number" id="buffer-size" value="10" min="1">
+            </div>
+
+            <div class="buttons">
+                <button id="btn-gnl">➡️ Prochain Appel à GNL</button>
+                <button id="btn-reset">🔄 Réinitialiser</button>
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h2>Visualisation Pas-à-Pas ✨</h2>
+            
+            <div>
+                <h3>1. Fichier (ce que tu lis)</h3>
+                <div class="visual-box" id="file-display-box">
+                    <pre id="file-display"></pre>
+                </div>
+            </div>
+
+            <div>
+                <h3>2. Le "Stash" (variable <code>static</code>)</h3>
+                <p>C'est la mémoire de GNL. Il stocke les bouts de texte lus qui n'ont pas encore été retournés car on n'a pas trouvé de `\n`.</p>
+                <div class="visual-box">
+                    <pre id="stash-display"></pre>
+                </div>
+            </div>
+
+            <div>
+                <h3>3. La Ligne Retournée (résultat de GNL)</h3>
+                 <p>Le résultat final de l'appel. C'est soit une ligne complète (avec son `\n`), soit la fin du fichier, soit `NULL`.</p>
+                <div class="visual-box">
+                    <pre id="result-display"></pre>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    // --- Logique Javascript pour la simulation ---
+
+    // 1. On récupère les éléments de la page
+    const textContentEl = document.getElementById('text-content');
+    const bufferSizeEl = document.getElementById('buffer-size');
+    const btnGnl = document.getElementById('btn-gnl');
+    const btnReset = document.getElementById('btn-reset');
+
+    const fileDisplayEl = document.getElementById('file-display');
+    const stashDisplayEl = document.getElementById('stash-display');
+    const resultDisplayEl = document.getElementById('result-display');
+    
+    // 2. Variables d'état (le cœur de la simulation)
+    // C'est l'équivalent de tes variables dans GNL
+    let stash = ''; // Notre variable static !
+    let readOffset = 0; // Le "curseur" de lecture dans le fichier
+    let isFinished = false;
+
+    // Fonction pour créer une pause (pour les animations)
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Fonction pour afficher le texte du fichier avec des couleurs
+    function renderFileDisplay() {
+        const text = textContentEl.value;
+        fileDisplayEl.innerHTML = ''; // On vide l'affichage
+        for (let i = 0; i < text.length; i++) {
+            const span = document.createElement('span');
+            // On représente visuellement le caractère newline
+            if (text[i] === '\n') {
+                span.textContent = '↵';
+                span.classList.add('nl-char');
+            } else {
+                span.textContent = text[i];
+            }
+            
+            if (i < readOffset) {
+                span.style.opacity = '0.4'; // Griser le texte déjà lu
+            }
+            fileDisplayEl.appendChild(span);
+        }
+    }
+
+    // Fonction pour mettre à jour les affichages
+    function updateDisplays(returnedLine, isNull = false) {
+        // Met à jour le stash
+        stashDisplayEl.textContent = stash.replace(/\n/g, '↵\n');
+
+        // Met à jour le résultat
+        if (isNull) {
+            resultDisplayEl.textContent = "NULL (fin)";
+            resultDisplayEl.classList.add('null');
+        } else {
+            resultDisplayEl.textContent = returnedLine.replace(/\n/g, '↵\n');
+            resultDisplayEl.classList.remove('null');
+        }
+        
+        // Met à jour l'affichage du fichier (griser)
+        renderFileDisplay();
+    }
+    
+    // 3. La fonction principale qui simule GNL
+    async function handleGnlCall() {
+        if (isFinished) return;
+
+        btnGnl.disabled = true; // On désactive le bouton pendant l'animation
+
+        const text = textContentEl.value;
+        const bufferSize = parseInt(bufferSizeEl.value, 10);
+        let lineBuffer = stash; // On commence avec ce qui restait dans le stash
+
+        // On anime le contenu du stash qui passe dans le buffer de travail
+        for (let i = 0; i < stashDisplayEl.childNodes.length; i++) {
+            if (stashDisplayEl.childNodes[i].nodeType === 3) { // Text node
+                const text = stashDisplayEl.childNodes[i].textContent;
+                stashDisplayEl.childNodes[i].textContent = '';
+                const span = document.createElement('span');
+                span.textContent = text;
+                span.classList.add('stash-char');
+                stashDisplayEl.insertBefore(span, stashDisplayEl.childNodes[i]);
+            }
+        }
+        await sleep(500);
+
+
+        let newlinePos = lineBuffer.indexOf('\n');
+
+        // Boucle de LECTURE : on lit tant qu'on n'a pas de \n
+        while (newlinePos === -1 && readOffset < text.length) {
+            
+            const endRead = Math.min(readOffset + bufferSize, text.length);
+            
+            // Animer la lecture
+            for(let i = readOffset; i < endRead; i++) {
+                fileDisplayEl.children[i].classList.add('read-char');
+            }
+            await sleep(400);
+
+            // Simule read()
+            const readChunk = text.substring(readOffset, endRead);
+            lineBuffer += readChunk;
+            
+            // Animer le déplacement vers le stash
+            stashDisplayEl.textContent = (stash + readChunk).replace(/\n/g, '↵\n');
+            
+            for(let i = readOffset; i < endRead; i++) {
+                fileDisplayEl.children[i].classList.remove('read-char');
+            }
+            readOffset = endRead; // On avance le curseur
+            await sleep(400);
+
+            newlinePos = lineBuffer.indexOf('\n');
+        }
+
+        // On a fini de lire, maintenant on TRAITE le résultat
+        if (lineBuffer.length === 0) {
+            // Plus rien à lire, ni dans le stash, ni dans le fichier
+            isFinished = true;
+            stash = '';
+            updateDisplays('', true);
+        } else if (newlinePos !== -1) {
+            // Cas 1 : On a trouvé un \n !
+            const returnedLine = lineBuffer.substring(0, newlinePos + 1);
+            stash = lineBuffer.substring(newlinePos + 1); // Le nouveau stash est ce qui reste APRES le \n
+            updateDisplays(returnedLine);
+        } else {
+            // Cas 2 : Fin du fichier, on retourne ce qui reste
+            const returnedLine = lineBuffer;
+            stash = ''; // Le stash est vide
+            isFinished = true; // On a tout lu
+            updateDisplays(returnedLine);
+        }
+
+        if (!isFinished) {
+            btnGnl.disabled = false;
+        }
+    }
+    
+    // 4. Fonction de réinitialisation
+    function resetSimulation() {
+        stash = '';
+        readOffset = 0;
+        isFinished = false;
+        btnGnl.disabled = false;
+
+        resultDisplayEl.textContent = '';
+        resultDisplayEl.classList.remove('null');
+        stashDisplayEl.textContent = '';
+        
+        renderFileDisplay();
+    }
+
+    // 5. On attache les fonctions aux boutons et inputs
+    btnGnl.addEventListener('click', handleGnlCall);
+    btnReset.addEventListener('click', resetSimulation);
+    
+    // Si l'utilisateur change le texte ou le buffer, on reset
+    textContentEl.addEventListener('input', resetSimulation);
+    bufferSizeEl.addEventListener('input', resetSimulation);
+
+    // Initialisation au chargement de la page
+    resetSimulation();
+
+    </script>
+</body>
+</html>
