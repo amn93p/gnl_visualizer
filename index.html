@@ -45,8 +45,8 @@
         /* --- Layout Principal (3 colonnes) --- */
         .main-container {
             display: grid;
-            /* CHANGEMENT: La 3ème colonne est maintenant 1.5x plus large que la 2ème */
-            grid-template-columns: 300px 1fr 1.5fr;
+            /* CHANGEMENT: La 3ème colonne est plus large et a une largeur minimale garantie */
+            grid-template-columns: 300px 1fr minmax(650px, 1.5fr);
             gap: 1.5rem;
             max-width: 1600px;
             margin: 0 auto;
@@ -255,6 +255,9 @@
             font-size: 0.85rem;
             margin: 0;
             counter-reset: line;
+            /* CHANGEMENT: Ajout de ces deux lignes pour garantir un affichage correct du code */
+            white-space: pre;
+            overflow-x: auto;
         }
         #code-display code span {
             display: block;
