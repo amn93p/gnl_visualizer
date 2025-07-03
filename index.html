@@ -82,7 +82,7 @@
                 <!-- Contenu du Fichier -->
                 <div>
                     <label for="file-content" class="block text-sm font-medium text-gray-300 mb-2">Contenu du "fichier" :</label>
-                    <textarea id="file-content" rows="8" class="w-full p-3 fira-code text-sm textarea-custom rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Entrez le contenu de votre fichier ici. Utilisez \n pour les sauts de ligne."></textarea>
+                    <textarea id="file-content" rows="8" class="w-full p-3 fira-code text-sm textarea-custom rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Entrez le contenu de votre fichier ici. Appuyez sur Entrée pour un saut de ligne."></textarea>
                 </div>
 
                 <!-- BUFFER_SIZE -->
@@ -175,13 +175,12 @@
         const returnValueInfoEl = document.getElementById('return-value-info');
 
         // --- État de la simulation ---
-        // On utilise un objet pour simuler les variables statiques pour plusieurs 'fd'
         let staticStorage = {}; 
-        let currentFd = 0; // descripteur de fichier par défaut
-        let readPosition = 0;
-        let fileText = '';
+        let readPositions = {};
+        let fileTexts = {};
+        let currentFd = 0;
 
-        // --- Scénarios de test ---
+        // --- Scénarios de test (avec de vrais sauts de ligne) ---
         const testCases = {
             custom: ``,
             simple: `Première ligne.\nDeuxième ligne.\nTroisième ligne.`,
@@ -189,22 +188,18 @@
             empty_lines: `Ligne 1\n\nLigne 3\n\n`,
             ends_with_newline: `Ligne A\nLigne B\n`,
             big_line: `Voici une ligne qui est volontairement beaucoup plus longue que la plupart des buffer sizes pour tester la boucle de lecture. C'est un bon test.`,
-            multiple_fd: `Fichier 1, Ligne 1\nFichier 1, Ligne 2\nFichier 1, Ligne 3`
+            multiple_fd: `Fichier 1, Ligne 1\nFichier 1, Ligne 2`
         };
         
         // --- Fonctions de l'interface ---
 
         function setup() {
-            fileText = fileContentEl.value.replace(/\\n/g, '\n');
-            readPosition = 0;
-            staticStorage = { 0: '' }; // Reset pour le fd 0
+            // Initialise ou réinitialise l'état pour un fd donné
+            const fd = currentFd;
+            fileTexts[fd] = fileContentEl.value;
+            readPositions[fd] = 0;
+            staticStorage[fd] = '';
             
-            // Pour le cas multi-fd, on prépare un second "fichier"
-            if (testCaseSelector.value === 'multiple_fd') {
-                staticStorage[1] = '';
-                // On pourrait avoir un autre textarea pour le 2e fichier, mais pour la simplicité on simule
-            }
-
             updateFileVisualization();
             updateStaticVarVisualization();
             returnedLineEl.innerHTML = '<span class="text-gray-500">Prêt à appeler GNL.</span>';
@@ -213,35 +208,71 @@
         }
         
         function resetSimulation() {
+            // Réinitialise tout l'état de la simulation
+            staticStorage = {};
+            readPositions = {};
+            fileTexts = {};
+            currentFd = 0;
+            fd_turn = 0;
             loadTestCase();
         }
         
         function loadTestCase() {
             const selectedCase = testCaseSelector.value;
+            fileContentEl.value = testCases[selectedCase];
+            
             if (selectedCase === 'multiple_fd') {
-                fileContentEl.value = testCases[selectedCase];
-                alert("Mode Multi-FD Simulé :\nL'outil va maintenant alterner les appels entre fd=0 et fd=1.\nRegardez comment la variable statique change pour chaque 'fichier'.");
-            } else {
-                fileContentEl.value = testCases[selectedCase].replace(/\n/g, '\\n');
+                alert("Mode Multi-FD Simulé :\nL'outil va maintenant alterner les appels entre fd=0 et fd=1.\nLe contenu du fichier pour fd=1 sera différent.");
             }
-            setup();
+            // Réinitialise l'état complet pour le nouveau scénario
+            staticStorage = {};
+            readPositions = {};
+            fileTexts = {};
+            currentFd = 0;
+            fd_turn = 0;
+            
+            // Configure l'état initial pour le fd 0
+            fileTexts[0] = fileContentEl.value;
+            readPositions[0] = 0;
+            staticStorage[0] = '';
+            
+            // Pré-configure l'état pour le fd 1 dans le cas multi-fd
+            if (selectedCase === 'multiple_fd') {
+                fileTexts[1] = "Fichier 2, Ligne A\nFichier 2, Ligne B";
+                readPositions[1] = 0;
+                staticStorage[1] = '';
+            }
+
+            updateFileVisualization();
+            updateStaticVarVisualization();
+            returnedLineEl.innerHTML = '<span class="text-gray-500">Prêt à appeler GNL.</span>';
+            returnValueInfoEl.textContent = '';
+            nextLineBtn.disabled = false;
         }
 
+        let lastBytesRead = 0;
         function updateFileVisualization() {
+            const fileText = fileTexts[currentFd] || '';
+            const readPosition = readPositions[currentFd] || 0;
+            
             if (!fileText) {
                 fileVizEl.innerHTML = '<span class="text-gray-500">Le contenu du fichier apparaîtra ici.</span>';
                 return;
             }
+            
             const beforeRead = fileText.substring(0, readPosition);
-            const lastRead = fileText.substring(readPosition, readPosition + (lastBytesRead > 0 ? lastBytesRead : 0) );
-            const afterRead = fileText.substring(readPosition + (lastBytesRead > 0 ? lastBytesRead : 0));
+            // Mettre en évidence ce qui a été lu DANS CET APPEL
+            const justReadStart = readPosition - lastBytesRead;
+            const textBeforeHighlight = fileText.substring(0, justReadStart);
+            const highlightedText = fileText.substring(justReadStart, readPosition);
+            const afterRead = fileText.substring(readPosition);
             
             fileVizEl.innerHTML = '';
-            fileVizEl.appendChild(document.createTextNode(beforeRead));
+            fileVizEl.appendChild(document.createTextNode(textBeforeHighlight));
             
             const spanRead = document.createElement('span');
             spanRead.className = 'highlight-read';
-            spanRead.textContent = lastRead;
+            spanRead.textContent = highlightedText;
             fileVizEl.appendChild(spanRead);
             
             fileVizEl.appendChild(document.createTextNode(afterRead));
@@ -273,7 +304,7 @@
             if (line === null) {
                 returnedLineEl.innerHTML = '<span class="text-yellow-400 font-bold">NULL</span>';
                 returnValueInfoEl.textContent = 'Fin de la lecture.';
-                nextLineBtn.disabled = true;
+                // Ne pas désactiver le bouton pour pouvoir tester d'autres fd
             } else if (line === 'ERROR') {
                  returnedLineEl.innerHTML = '<span class="text-red-500 font-bold">ERROR</span>';
                  returnValueInfoEl.textContent = 'Une erreur de lecture est survenue.';
@@ -286,14 +317,18 @@
 
 
         // --- Logique de simulation de GNL ---
-        let lastBytesRead = 0;
-
-        function mock_read(bufferSize) {
+        
+        function mock_read(fd, bufferSize) {
+            const fileText = fileTexts[fd] || '';
+            let readPosition = readPositions[fd] || 0;
+            
             if (readPosition >= fileText.length) {
+                lastBytesRead = 0;
                 return ''; // EOF
             }
             const chunk = fileText.substring(readPosition, readPosition + bufferSize);
             readPosition += chunk.length;
+            readPositions[fd] = readPosition;
             lastBytesRead = chunk.length;
             return chunk;
         }
@@ -308,9 +343,8 @@
                  return 'ERROR';
             }
 
-            // Boucle de lecture jusqu'à trouver un \n ou la fin du fichier
             while (!staticBuffer.includes('\n')) {
-                const chunk = mock_read(bufferSize);
+                const chunk = mock_read(currentFd, bufferSize);
                 if (chunk === '') { // EOF
                     break;
                 }
@@ -320,50 +354,38 @@
             staticStorage[currentFd] = staticBuffer;
             updateFileVisualization();
 
-            // Si pas de buffer et lecture finie, on a tout lu.
             if (staticBuffer === '') {
                 updateStaticVarVisualization();
                 return null;
             }
 
-            // Extraction de la ligne
             const newlineIndex = staticBuffer.indexOf('\n');
             let lineToReturn;
-            let remainingBuffer;
-
+            
             if (newlineIndex !== -1) {
                 lineToReturn = staticBuffer.substring(0, newlineIndex + 1);
-                remainingBuffer = staticBuffer.substring(newlineIndex + 1);
+                staticStorage[currentFd] = staticBuffer.substring(newlineIndex + 1);
             } else {
-                // Pas de \n, mais il reste du texte (dernière ligne)
                 lineToReturn = staticBuffer;
-                remainingBuffer = '';
+                staticStorage[currentFd] = '';
             }
 
             updateStaticVarVisualization(lineToReturn);
-            staticStorage[currentFd] = remainingBuffer;
             
             return lineToReturn;
         }
         
         let fd_turn = 0;
         function handleNextLineClick() {
+            // Si le mode personnalisé est actif, s'assurer que le contenu est à jour
+            if (testCaseSelector.value === 'custom') {
+                fileTexts[0] = fileContentEl.value;
+            }
+
             if (testCaseSelector.value === 'multiple_fd') {
                 currentFd = fd_turn;
                 alert(`Appel de GNL pour le fd = ${currentFd}`);
-                fd_turn = (fd_turn + 1) % 2; // Alterne entre 0 et 1
-                // Pour la simplicité, on lit toujours du même fichier source
-                // mais on utilise des buffers statiques différents.
-                // Dans un vrai scénario, chaque fd aurait sa propre position de lecture.
-                // Ici, on réinitialise la position pour simuler une lecture indépendante.
-                if(currentFd === 1) {
-                    // On simule un second fichier identique pour la démo
-                    fileText = "Fichier 2, Ligne A\nFichier 2, Ligne B";
-                    readPosition = 0;
-                } else {
-                    fileText = testCases.multiple_fd;
-                    readPosition = 0;
-                }
+                fd_turn = (fd_turn + 1) % 2;
             } else {
                  currentFd = 0;
             }
@@ -371,11 +393,9 @@
             const line = getNextLineSimulator();
             displayReturnedLine(line);
             
-            // On met à jour la visualisation de la statique une dernière fois
-            // pour montrer ce qu'il reste APRES le retour.
             setTimeout(() => {
                  updateStaticVarVisualization();
-            }, 100);
+            }, 150);
         }
 
         // --- Écouteurs d'événements ---
@@ -383,7 +403,7 @@
         resetBtn.addEventListener('click', resetSimulation);
         testCaseSelector.addEventListener('change', loadTestCase);
         
-        // Initialisation
+        // Initialisation au chargement
         window.addEventListener('load', () => {
             loadTestCase();
         });
