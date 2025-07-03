@@ -3,700 +3,391 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulateur Interactif Get Next Line (GNL)</title>
+    <title>Get Next Line - Visualizer Interactif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        /* --- Google Fonts --- */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code:wght@400;500;600&display=swap');
-
-        /* --- Variables de Couleur (Thème "Cyberpunk") --- */
-        :root {
-            --bg-color: #0d1117;
-            --card-bg: #161b22;
-            --border-color: #30363d;
-            --text-main: #c9d1d9;
-            --text-secondary: #8b949e;
-            --accent-primary: #58a6ff;
-            --accent-green: #3fb950;
-            --accent-yellow: #d29922;
-            --accent-red: #f85149;
-            --accent-purple: #bc8cff;
-            --font-body: 'Inter', sans-serif;
-            --font-code: 'Fira Code', monospace;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-        }
-
-        /* --- Style Général --- */
-        * {
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
         body {
-            font-family: var(--font-body);
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 2rem;
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* bg-gray-900 */
+            color: #d1d5db; /* text-gray-300 */
         }
-
-        /* --- Layout Principal (3 colonnes) --- */
-        .main-container {
-            display: grid;
-            /* CHANGEMENT: La 3ème colonne est plus large et a une largeur minimale garantie */
-            grid-template-columns: 300px 1fr minmax(650px, 1.5fr);
-            gap: 1.5rem;
-            max-width: 1600px;
-            margin: 0 auto;
+        .fira-code {
+            font-family: 'Fira Code', monospace;
         }
-
-        /* --- Style des "Cartes" --- */
         .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 1.5rem;
-            box-shadow: var(--shadow);
-            display: flex;
-            flex-direction: column;
+            background-color: #1f2937; /* bg-gray-800 */
+            border: 1px solid #374151; /* border-gray-700 */
+            border-radius: 0.75rem; /* rounded-xl */
         }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
+        .btn {
+            transition: all 0.2s ease-in-out;
         }
-
-        .card-header svg {
-            width: 24px;
-            height: 24px;
-            flex-shrink: 0;
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
-
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin: 0;
-            color: var(--text-main);
+        .textarea-custom {
+            background-color: #374151; /* bg-gray-700 */
+            border: 1px solid #4b5563; /* border-gray-600 */
+            color: #e5e7eb; /* text-gray-200 */
         }
-
-        /* --- Colonne de Gauche : Panneau de Contrôle --- */
-        #control-panel label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: var(--text-secondary);
+        .highlight-read {
+            background-color: rgba(59, 130, 246, 0.3); /* bg-blue-500/30 */
+            color: #eff6ff; /* text-blue-50 */
         }
-
-        #control-panel textarea, #control-panel input {
-            width: 100%;
-            padding: 0.75rem;
-            background-color: var(--bg-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            border-radius: 6px;
-            font-family: var(--font-code);
-            font-size: 0.9rem;
-            transition: border-color 0.2s, box-shadow 0.2s;
+        .highlight-line {
+            background-color: rgba(34, 197, 94, 0.3); /* bg-green-500/30 */
+            color: #f0fdf4; /* text-green-50 */
         }
-
-        #control-panel textarea:focus, #control-panel input:focus {
-            outline: none;
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+        .highlight-buffer {
+             background-color: rgba(234, 179, 8, 0.2); /* bg-yellow-500/20 */
+             border: 1px dashed rgba(234, 179, 8, 0.6);
         }
-
-        #control-panel textarea {
-            min-height: 150px;
-            resize: vertical;
-        }
-
-        .control-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .presets {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-        }
-
-        .presets button {
-            background-color: #21262d;
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-        }
-        .presets button:hover {
-            border-color: var(--accent-primary);
-            color: var(--accent-primary);
-        }
-
-        .main-buttons {
-            margin-top: auto; /* Pousse les boutons en bas */
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        button {
-            padding: 0.75rem;
-            font-family: var(--font-body);
-            font-size: 1rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        #btn-gnl {
-            background-color: var(--accent-primary);
-            color: var(--bg-color);
-        }
-        #btn-gnl:hover {
-            background-color: #79c0ff;
-        }
-        #btn-gnl:disabled {
-            background-color: #21262d;
-            color: var(--text-secondary);
-            cursor: not-allowed;
-        }
-
-        #btn-reset {
-            background-color: #30363d;
-            color: var(--text-main);
-        }
-        #btn-reset:hover {
-            background-color: #484f58;
-        }
-
-        /* --- Colonne Centrale : Visualisation --- */
-        .visual-box {
-            background-color: #010409;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 1rem;
-            margin-top: 0.5rem;
-            min-height: 80px;
-            font-family: var(--font-code);
-            white-space: pre-wrap;
-            word-break: break-all;
-            transition: all 0.3s;
-            position: relative;
-        }
-        .visual-box-title {
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-        }
-        .visual-box pre {
-            margin: 0;
-            padding: 0;
-            font-size: 1.1rem;
-        }
-        #file-display-box .cursor {
-            width: 2px;
-            height: 1.2em;
-            background-color: var(--accent-red);
-            display: inline-block;
-            vertical-align: middle;
-            animation: blink 1s step-end infinite;
-        }
-        @keyframes blink {
-            from, to { background-color: transparent; }
-            50% { background-color: var(--accent-red); }
-        }
-
-        /* --- Styles pour les animations de caractères --- */
-        .char {
-            display: inline-block;
-            transition: all 0.3s ease-out;
-            border-radius: 3px;
-        }
-        .char.read {
-            background-color: var(--accent-yellow);
-            color: var(--bg-color);
-            transform: scale(1.2);
-        }
-        .char.stash {
-            background-color: var(--accent-purple);
-            color: var(--bg-color);
-        }
-        .char.returned {
-            background-color: var(--accent-green);
-            color: var(--bg-color);
-        }
-        .char.nl {
-            background-color: rgba(88, 166, 255, 0.2);
-        }
-        .char.faded {
-            opacity: 0.3;
-        }
-        #result-display.null {
-            color: var(--accent-red);
-            font-style: italic;
-        }
-
-        /* --- Colonne de Droite : Code & Journal --- */
-        #code-display pre {
-            background-color: #010409;
-            padding: 1rem;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            margin: 0;
-            counter-reset: line;
-            /* CHANGEMENT: Ajout de ces deux lignes pour garantir un affichage correct du code */
-            white-space: pre;
-            overflow-x: auto;
-        }
-        #code-display code span {
-            display: block;
-            padding: 0.1rem 0.5rem;
-            margin: 0 -0.5rem;
-            border-radius: 3px;
-            transition: background-color 0.3s;
-        }
-        #code-display code span::before {
-            counter-increment: line;
-            content: counter(line);
-            display: inline-block;
-            width: 2em;
-            text-align: right;
-            margin-right: 1em;
-            color: var(--text-secondary);
-        }
-        #code-display .active-line {
-            background-color: rgba(88, 166, 255, 0.2);
-        }
-        #code-display .comment { color: var(--text-secondary); }
-        #code-display .keyword { color: var(--accent-red); }
-        #code-display .type { color: var(--accent-purple); }
-        #code-display .function { color: var(--accent-primary); }
-        #code-display .literal { color: var(--accent-green); }
-
-        #log-box {
-            margin-top: 1.5rem;
-            flex-grow: 1; /* Prend l'espace restant */
-        }
-        #log-messages {
-            background-color: #010409;
-            border-radius: 6px;
-            padding: 1rem;
-            height: 250px;
-            overflow-y: auto;
-            font-family: var(--font-code);
-            font-size: 0.9rem;
-        }
-        .log-entry {
-            padding-bottom: 0.5rem;
-            margin-bottom: 0.5rem;
-            border-bottom: 1px dashed var(--border-color);
-            display: flex;
-            gap: 0.75rem;
-        }
-        .log-entry:last-child {
-            border-bottom: none;
-        }
-        .log-icon {
-            flex-shrink: 0;
-        }
-        .log-entry.info { color: var(--text-secondary); }
-        .log-entry.read { color: var(--accent-yellow); }
-        .log-entry.process { color: var(--accent-purple); }
-        .log-entry.success { color: var(--accent-green); }
-        .log-entry.error { color: var(--accent-red); }
-        
-        /* --- Responsive Design --- */
-        @media (max-width: 1200px) {
-            .main-container {
-                grid-template-columns: 300px 1fr;
-            }
-            #code-log-panel {
-                grid-column: 1 / -1; /* Prend toute la largeur */
-            }
-        }
-        @media (max-width: 768px) {
-            body { padding: 1rem; }
-            .main-container {
-                grid-template-columns: 1fr;
-            }
-        }
-
     </style>
 </head>
-<body>
+<body class="p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
 
-    <main class="main-container">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-2">
+                Get Next Line <span class="text-blue-400">Visualizer</span>
+            </h1>
+            <p class="text-lg text-gray-400">Un outil pour décortiquer et maîtriser le comportement de GNL.</p>
+        </header>
 
-        <!-- COLONNE 1: CONTRÔLES -->
-        <section id="control-panel" class="card">
-            <div class="card-header">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="color: var(--accent-primary);"><path d="M12 2a1 1 0 0 1 1 1v2.5a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1zM7.05 6.05a1 1 0 0 1 1.414-1.414l1.768 1.768a1 1 0 1 1-1.414 1.414L7.05 6.05zm9.9 0a1 1 0 0 1 1.414 1.414l-1.768 1.768a1 1 0 1 1-1.414-1.414l1.768-1.768zM3 12a1 1 0 0 1 1-1h2.5a1 1 0 0 1 0 2H4a1 1 0 0 1-1-1zm15.5 1a1 1 0 0 1 0-2H21a1 1 0 0 1 0 2h-2.5zM7.05 17.95a1 1 0 0 1-1.414-1.414l1.768-1.768a1 1 0 0 1 1.414 1.414l-1.768 1.768zm9.9 0a1 1 0 0 1-1.414 1.414l-1.768-1.768a1 1 0 1 1 1.414-1.414l1.768 1.768zM12 22a1 1 0 0 1-1-1v-2.5a1 1 0 0 1 2 0V21a1 1 0 0 1-1-1zM12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
-                <h2 class="card-title">Panneau de Contrôle</h2>
-            </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-            <div class="control-group">
-                <label for="text-content">Contenu du Fichier</label>
-                <textarea id="text-content"></textarea>
-            </div>
+            <!-- Colonne de Contrôle et Simulation -->
+            <div class="card p-6 flex flex-col space-y-6">
+                <h2 class="text-2xl font-bold text-white border-b border-gray-700 pb-3">1. Simulation</h2>
+                
+                <!-- Scénarios de test -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Charger un scénario de test :</label>
+                    <select id="test-case-selector" class="w-full p-2.5 textarea-custom rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="custom">Personnalisé</option>
+                        <option value="simple">Simple</option>
+                        <option value="no_newline">Pas de retour à la ligne</option>
+                        <option value="empty_lines">Lignes vides</option>
+                        <option value="ends_with_newline">Finit par un newline</option>
+                        <option value="big_line">Ligne très longue</option>
+                         <option value="multiple_fd">Lectures multiples (simulé)</option>
+                    </select>
+                </div>
 
-            <div class="control-group">
-                <label for="buffer-size">BUFFER_SIZE</label>
-                <input type="number" id="buffer-size" value="10" min="1">
-            </div>
-            
-            <div class="control-group">
-                 <label>Scénarios Prédéfinis</label>
-                 <div class="presets">
-                    <button data-scenario="classic">Classique</button>
-                    <button data-scenario="small_buffer">Petit Buffer</button>
-                    <button data-scenario="no_newline">Sans `\n`</button>
-                    <button data-scenario="empty">Fichier Vide</button>
-                 </div>
-            </div>
+                <!-- Contenu du Fichier -->
+                <div>
+                    <label for="file-content" class="block text-sm font-medium text-gray-300 mb-2">Contenu du "fichier" :</label>
+                    <textarea id="file-content" rows="8" class="w-full p-3 fira-code text-sm textarea-custom rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Entrez le contenu de votre fichier ici. Utilisez \n pour les sauts de ligne."></textarea>
+                </div>
 
-            <div class="main-buttons">
-                <button id="btn-gnl">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M16.172 11l-5.364-5.364 1.414-1.414L20 12l-7.778 7.778-1.414-1.414L16.172 13H4v-2h12.172z"/></svg>
-                    Prochain Appel GNL
-                </button>
-                <button id="btn-reset">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm-1 3a1 1 0 0 1 2 0v5.414l3.707 3.707-1.414 1.414L11 13.828V7z"/></svg>
-                    Réinitialiser
-                </button>
-            </div>
-        </section>
+                <!-- BUFFER_SIZE -->
+                <div>
+                    <label for="buffer-size" class="block text-sm font-medium text-gray-300 mb-2">BUFFER_SIZE :</label>
+                    <input type="number" id="buffer-size" value="32" min="1" class="w-full p-2.5 textarea-custom rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
 
-        <!-- COLONNE 2: VISUALISATION -->
-        <section id="visual-panel" class="card">
-             <div class="card-header">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="color: var(--accent-yellow);"><path d="M12 3c-4.963 0-9 4.037-9 9s4.037 9 9 9 9-4.037 9-9-4.037-9-9-9zm0 16c-3.859 0-7-3.141-7-7s3.141-7 7-7 7 3.141 7 7-3.141 7-7 7zM14 7l-4 4h3v6h2V9h3l-4-2z"/></svg>
-                <h2 class="card-title">Flux de Données</h2>
-            </div>
-            <div>
-                <p class="visual-box-title">1. Fichier (source de données)</p>
-                <div class="visual-box" id="file-display-box">
-                    <pre id="file-display"></pre>
+                <!-- Boutons de Contrôle -->
+                <div class="flex flex-col sm:flex-row gap-4 pt-4 border-t border-gray-700">
+                    <button id="next-line-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg btn">
+                        Appeler get_next_line()
+                    </button>
+                    <button id="reset-btn" class="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-4 rounded-lg btn">
+                        Réinitialiser
+                    </button>
                 </div>
             </div>
-             <div>
-                <p class="visual-box-title">2. Stash (variable <code>static</code> - la mémoire de GNL)</p>
-                <div class="visual-box">
-                    <pre id="stash-display"></pre>
+
+            <!-- Colonne de Visualisation -->
+            <div class="card p-6 flex flex-col space-y-6">
+                <h2 class="text-2xl font-bold text-white border-b border-gray-700 pb-3">2. Visualisation</h2>
+                
+                <!-- Ligne Retournée -->
+                <div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Ligne retournée par GNL :</h3>
+                    <div id="returned-line" class="p-4 textarea-custom rounded-lg min-h-[50px] fira-code text-sm whitespace-pre-wrap break-words">
+                        <span class="text-gray-500">En attente du premier appel...</span>
+                    </div>
+                     <div id="return-value-info" class="text-right text-xs text-gray-400 mt-1"></div>
+                </div>
+
+                <!-- État de la variable statique -->
+                <div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Contenu de la variable statique (buffer interne) :</h3>
+                    <div id="static-var" class="p-4 textarea-custom rounded-lg min-h-[80px] fira-code text-sm whitespace-pre-wrap break-words">
+                         <span class="text-gray-500">Vide.</span>
+                    </div>
+                </div>
+
+                <!-- Visualisation du fichier -->
+                <div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Visualisation de la lecture :</h3>
+                    <div id="file-visualization" class="p-4 textarea-custom rounded-lg min-h-[120px] fira-code text-sm whitespace-pre-wrap break-words">
+                        <span class="text-gray-500">Le contenu du fichier apparaîtra ici.</span>
+                    </div>
                 </div>
             </div>
-             <div>
-                <p class="visual-box-title">3. Ligne Retournée (résultat de l'appel)</p>
-                <div class="visual-box">
-                    <pre id="result-display"></pre>
-                </div>
-            </div>
-        </section>
+        </div>
+        
+        <!-- Section Explications -->
+        <div class="card p-6 mt-8">
+             <h2 class="text-2xl font-bold text-white border-b border-gray-700 pb-3 mb-4">3. Logique de Get Next Line</h2>
+             <div class="space-y-4 text-gray-300">
+                <p>
+                    Le but de <strong>get_next_line</strong> est de lire un fichier ligne par ligne. La difficulté vient du fait qu'on ne peut lire le fichier que par "morceaux" de taille <code>BUFFER_SIZE</code>.
+                </p>
+                <ol class="list-decimal list-inside space-y-3 pl-4">
+                    <li>
+                        <strong>La variable statique est la clé :</strong> Elle conserve ce qui a été lu mais pas encore retourné. C'est la mémoire de votre fonction entre deux appels. Si vous lisez <code>"abc\ndef"</code> avec un <code>BUFFER_SIZE</code> de 5, votre buffer interne contiendra <code>"abc\n"</code>. Au premier appel, vous retournez <code>"abc\n"</code> et votre statique gardera <code>"def"</code> pour le prochain appel.
+                    </li>
+                    <li>
+                        <strong>Boucle de lecture :</strong> Vous devez lire le fichier (avec la fonction <code>read</code>) et ajouter le contenu lu à votre variable statique, jusqu'à ce que celle-ci contienne un retour à la ligne (<code>\n</code>) ou que la lecture soit terminée.
+                    </li>
+                    <li>
+                        <strong>Extraction de la ligne :</strong> Une fois qu'un <code>\n</code> est trouvé dans la statique, vous devez "extraire" tout ce qui se trouve avant (et y compris) ce <code>\n</code>. C'est la ligne que votre fonction doit retourner.
+                    </li>
+                    <li>
+                        <strong>Nettoyage de la statique :</strong> Après avoir extrait la ligne, le reste doit être conservé dans la variable statique pour les appels futurs. Si votre statique contenait <code>"ligne1\nligne2"</code>, vous retournez <code>"ligne1\n"</code> et votre statique doit maintenant contenir <code>"ligne2"</code>.
+                    </li>
+                     <li>
+                        <strong>Fin du fichier (EOF) :</strong> Si <code>read</code> retourne 0, cela signifie que vous avez atteint la fin du fichier. S'il reste quelque chose dans votre variable statique, il faut le retourner (c'est la dernière ligne, qui peut ne pas avoir de <code>\n</code>). Sinon, vous retournez <code>NULL</code> pour signaler la fin. Si <code>read</code> retourne -1, c'est une erreur.
+                    </li>
+                </ol>
+             </div>
+        </div>
 
-        <!-- COLONNE 3: CODE & JOURNAL -->
-        <section id="code-log-panel" class="card">
-             <div class="card-header">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="color: var(--accent-green);"><path d="M24 12l-5.657 5.657-1.414-1.414L21.172 12l-4.243-4.243-1.414 1.414L24 12zM2.828 12l4.243 4.243 1.414-1.414L4.243 12l4.242-4.243-1.414-1.414L0 12l2.828 2.828zM9.03 21.485l-1.414-1.414L12.243 6l1.414 1.414-4.628 14.071z"/></svg>
-                <h2 class="card-title">Exécution du Code & Journal</h2>
-            </div>
-            <div id="code-display">
-                <pre><code>
-<span id="code-1"><span class="type">char</span> *<span class="function">get_next_line</span>(<span class="type">int</span> fd)</span>
-<span id="code-2">{</span>
-<span id="code-3">    <span class="keyword">static</span> <span class="type">char</span> *stash;</span>
-<span id="code-4">    <span class="type">char</span>        *line;</span>
-<span id="code-5">    <span class="type">int</span>         read_bytes;</span>
-<span id="code-6"></span>
-<span id="code-7">    <span class="comment">// Boucle pour lire le fichier jusqu'à trouver un '\n'</span></span>
-<span id="code-8">    <span class="keyword">while</span> (!<span class="function">has_newline</span>(stash))</span>
-<span id="code-9">    {</span>
-<span id="code-10">        <span class="comment">// ... read(fd, buffer, BUFFER_SIZE) ...</span></span>
-<span id="code-11">        <span class="comment">// ... ajoute le buffer au stash ...</span></span>
-<span id="code-12">        <span class="keyword">if</span> (read_bytes <= <span class="literal">0</span>) <span class="keyword">break</span>;</span>
-<span id="code-13">    }</span>
-<span id="code-14"></span>
-<span id="code-15">    <span class="comment">// Extraire la ligne du stash</span></span>
-<span id="code-16">    line = <span class="function">extract_line_from_stash</span>(&stash);</span>
-<span id="code-17">    </span>
-<span id="code-18">    <span class="keyword">return</span> (line);</span>
-<span id="code-19">}</span>
-                </code></pre>
-            </div>
-            <div id="log-box">
-                <p class="visual-box-title" style="margin-top: 1.5rem;">Journal des Opérations</p>
-                <div id="log-messages"></div>
-            </div>
-        </section>
-
-    </main>
+    </div>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
         // --- Éléments du DOM ---
-        const textContentEl = document.getElementById('text-content');
+        const fileContentEl = document.getElementById('file-content');
         const bufferSizeEl = document.getElementById('buffer-size');
-        const btnGnl = document.getElementById('btn-gnl');
-        const btnReset = document.getElementById('btn-reset');
-        const fileDisplayEl = document.getElementById('file-display');
-        const stashDisplayEl = document.getElementById('stash-display');
-        const resultDisplayEl = document.getElementById('result-display');
-        const logMessagesEl = document.getElementById('log-messages');
-        const codeLines = document.querySelectorAll('#code-display code span');
-        const presetButtons = document.querySelectorAll('.presets button');
+        const nextLineBtn = document.getElementById('next-line-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const returnedLineEl = document.getElementById('returned-line');
+        const staticVarEl = document.getElementById('static-var');
+        const fileVizEl = document.getElementById('file-visualization');
+        const testCaseSelector = document.getElementById('test-case-selector');
+        const returnValueInfoEl = document.getElementById('return-value-info');
 
-        // --- Variables d'état ---
-        let stash = '';
-        let readOffset = 0;
-        let isFinished = false;
-        let gnlCallCount = 0;
+        // --- État de la simulation ---
+        // On utilise un objet pour simuler les variables statiques pour plusieurs 'fd'
+        let staticStorage = {}; 
+        let currentFd = 0; // descripteur de fichier par défaut
+        let readPosition = 0;
+        let fileText = '';
 
-        // --- Scénarios prédéfinis ---
-        const scenarios = {
-            classic: {
-                text: "Ligne 1\nLigne 2 est plus longue.\nDernière ligne.",
-                buffer: 10
-            },
-            small_buffer: {
-                text: "abc\ndef\nghi",
-                buffer: 1
-            },
-            no_newline: {
-                text: "Un seul bloc de texte sans retour a la ligne.",
-                buffer: 15
-            },
-            empty: {
-                text: "",
-                buffer: 10
-            }
+        // --- Scénarios de test ---
+        const testCases = {
+            custom: ``,
+            simple: `Première ligne.\nDeuxième ligne.\nTroisième ligne.`,
+            no_newline: `Une seule longue ligne sans retour.`,
+            empty_lines: `Ligne 1\n\nLigne 3\n\n`,
+            ends_with_newline: `Ligne A\nLigne B\n`,
+            big_line: `Voici une ligne qui est volontairement beaucoup plus longue que la plupart des buffer sizes pour tester la boucle de lecture. C'est un bon test.`,
+            multiple_fd: `Fichier 1, Ligne 1\nFichier 1, Ligne 2\nFichier 1, Ligne 3`
         };
+        
+        // --- Fonctions de l'interface ---
 
-        // --- Fonctions Utilitaires ---
-        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-        function highlightCodeLine(lineNumber, duration = 300) {
-            codeLines.forEach(line => line.classList.remove('active-line'));
-            if (lineNumber > 0 && lineNumber <= codeLines.length) {
-                codeLines[lineNumber - 1].classList.add('active-line');
+        function setup() {
+            fileText = fileContentEl.value.replace(/\\n/g, '\n');
+            readPosition = 0;
+            staticStorage = { 0: '' }; // Reset pour le fd 0
+            
+            // Pour le cas multi-fd, on prépare un second "fichier"
+            if (testCaseSelector.value === 'multiple_fd') {
+                staticStorage[1] = '';
+                // On pourrait avoir un autre textarea pour le 2e fichier, mais pour la simplicité on simule
             }
-            return sleep(duration);
-        }
 
-        function addLog(message, type = 'info') {
-            const icons = {
-                info: '💬', read: '🔍', process: '⚙️', success: '✅', error: '❌'
-            };
-            const entry = document.createElement('div');
-            entry.className = `log-entry ${type}`;
-            entry.innerHTML = `<span class="log-icon">${icons[type]}</span> <div>${message}</div>`;
-            logMessagesEl.appendChild(entry);
-            logMessagesEl.scrollTop = logMessagesEl.scrollHeight;
-        }
-
-        function renderFileDisplay() {
-            const text = textContentEl.value;
-            fileDisplayEl.innerHTML = '';
-            for (let i = 0; i < text.length; i++) {
-                const charSpan = document.createElement('span');
-                charSpan.className = 'char';
-                if (text[i] === '\n') {
-                    charSpan.textContent = '↵';
-                    charSpan.classList.add('nl');
-                } else {
-                    charSpan.textContent = text[i];
-                }
-                if (i < readOffset) {
-                    charSpan.classList.add('faded');
-                }
-                fileDisplayEl.appendChild(charSpan);
-            }
-            // Ajout du curseur
-            if (readOffset < text.length) {
-                const cursorSpan = document.createElement('span');
-                cursorSpan.className = 'cursor';
-                if (readOffset === 0) {
-                    fileDisplayEl.prepend(cursorSpan);
-                } else {
-                    fileDisplayEl.children[readOffset-1].after(cursorSpan);
-                }
-            }
+            updateFileVisualization();
+            updateStaticVarVisualization();
+            returnedLineEl.innerHTML = '<span class="text-gray-500">Prêt à appeler GNL.</span>';
+            returnValueInfoEl.textContent = '';
+            nextLineBtn.disabled = false;
         }
         
-        function renderStashAndResult(returnedLine, isNull = false) {
-            stashDisplayEl.innerHTML = '';
-            stash.split('').forEach(char => {
-                const charSpan = document.createElement('span');
-                charSpan.className = 'char stash';
-                 if (char === '\n') {
-                    charSpan.textContent = '↵';
-                    charSpan.classList.add('nl');
-                } else {
-                    charSpan.textContent = char;
-                }
-                stashDisplayEl.appendChild(charSpan);
-            });
-
-            resultDisplayEl.classList.toggle('null', isNull);
-            if (isNull) {
-                resultDisplayEl.textContent = "NULL";
+        function resetSimulation() {
+            loadTestCase();
+        }
+        
+        function loadTestCase() {
+            const selectedCase = testCaseSelector.value;
+            if (selectedCase === 'multiple_fd') {
+                fileContentEl.value = testCases[selectedCase];
+                alert("Mode Multi-FD Simulé :\nL'outil va maintenant alterner les appels entre fd=0 et fd=1.\nRegardez comment la variable statique change pour chaque 'fichier'.");
             } else {
-                resultDisplayEl.innerHTML = '';
-                 returnedLine.split('').forEach(char => {
-                    const charSpan = document.createElement('span');
-                    charSpan.className = 'char returned';
-                    if (char === '\n') {
-                        charSpan.textContent = '↵';
-                        charSpan.classList.add('nl');
-                    } else {
-                        charSpan.textContent = char;
-                    }
-                    resultDisplayEl.appendChild(charSpan);
-                });
+                fileContentEl.value = testCases[selectedCase].replace(/\n/g, '\\n');
             }
+            setup();
         }
-        
-        // --- Logique Principale ---
-        async function handleGnlCall() {
-            if (isFinished) {
-                addLog("Le fichier est entièrement lu. Réinitialisez pour recommencer.", "error");
+
+        function updateFileVisualization() {
+            if (!fileText) {
+                fileVizEl.innerHTML = '<span class="text-gray-500">Le contenu du fichier apparaîtra ici.</span>';
+                return;
+            }
+            const beforeRead = fileText.substring(0, readPosition);
+            const lastRead = fileText.substring(readPosition, readPosition + (lastBytesRead > 0 ? lastBytesRead : 0) );
+            const afterRead = fileText.substring(readPosition + (lastBytesRead > 0 ? lastBytesRead : 0));
+            
+            fileVizEl.innerHTML = '';
+            fileVizEl.appendChild(document.createTextNode(beforeRead));
+            
+            const spanRead = document.createElement('span');
+            spanRead.className = 'highlight-read';
+            spanRead.textContent = lastRead;
+            fileVizEl.appendChild(spanRead);
+            
+            fileVizEl.appendChild(document.createTextNode(afterRead));
+        }
+
+        function updateStaticVarVisualization(lineExtracted = '') {
+            const staticContent = staticStorage[currentFd] || '';
+            if (!staticContent && !lineExtracted) {
+                staticVarEl.innerHTML = '<span class="text-gray-500">Vide.</span>';
                 return;
             }
             
-            gnlCallCount++;
-            btnGnl.disabled = true;
-            resultDisplayEl.innerHTML = '';
-            addLog(`--- Appel n°${gnlCallCount} à get_next_line ---`, 'info');
-            
-            await highlightCodeLine(1);
-            await sleep(500);
+            staticVarEl.innerHTML = '';
 
-            await highlightCodeLine(3);
-            addLog("Le stash contient : " + (stash ? `"${stash.replace(/\n/g, '↵')}"` : "rien"), 'process');
-            await sleep(800);
-
-            let lineBuffer = stash;
-            let newlinePos = lineBuffer.indexOf('\n');
-
-            await highlightCodeLine(8);
-            while (newlinePos === -1 && readOffset < textContentEl.value.length) {
-                addLog("Pas de '\\n' dans le stash, on doit lire le fichier.", 'read');
-                await sleep(500);
-                
-                await highlightCodeLine(10);
-                const bufferSize = parseInt(bufferSizeEl.value, 10) || 1;
-                const text = textContentEl.value;
-                const endRead = Math.min(readOffset + bufferSize, text.length);
-                const readChunk = text.substring(readOffset, endRead);
-                
-                addLog(`Appel à read() avec BUFFER_SIZE=${bufferSize}. Lu : "${readChunk.replace(/\n/g, '↵')}"`, 'read');
-
-                // Animation de lecture
-                for (let i = readOffset; i < endRead; i++) {
-                    fileDisplayEl.children[i + (readOffset > 0)].classList.add('read');
-                }
-                await sleep(600);
-                for (let i = readOffset; i < endRead; i++) {
-                    fileDisplayEl.children[i + (readOffset > 0)].classList.remove('read');
-                    fileDisplayEl.children[i + (readOffset > 0)].classList.add('faded');
-                }
-
-                readOffset = endRead;
-                lineBuffer += readChunk;
-                renderStashAndResult(''); // Met à jour le stash visuellement
-                stash = lineBuffer; // On met à jour le vrai stash ici pour la prochaine itération
-                renderFileDisplay();
-                
-                await highlightCodeLine(11);
-                addLog(`Nouveau stash : "${lineBuffer.replace(/\n/g, '↵')}"`, 'process');
-                await sleep(800);
-
-                await highlightCodeLine(12);
-                newlinePos = lineBuffer.indexOf('\n');
-                await highlightCodeLine(8);
+            if(lineExtracted) {
+                const spanLine = document.createElement('span');
+                spanLine.className = 'highlight-line';
+                spanLine.textContent = lineExtracted.replace(/\n/g, '↵\n');
+                staticVarEl.appendChild(spanLine);
             }
+            
+            const spanBuffer = document.createElement('span');
+            spanBuffer.className = 'highlight-buffer';
+            spanBuffer.textContent = staticContent.replace(/\n/g, '↵\n');
+            staticVarEl.appendChild(spanBuffer);
+        }
 
-            if (lineBuffer.length === 0) {
-                await highlightCodeLine(18);
-                addLog("Le stash est vide et le fichier est fini. On retourne NULL.", 'success');
-                isFinished = true;
-                renderStashAndResult('', true);
-            } else if (newlinePos !== -1) {
-                await highlightCodeLine(16);
-                const returnedLine = lineBuffer.substring(0, newlinePos + 1);
-                stash = lineBuffer.substring(newlinePos + 1);
-                addLog(`'\\n' trouvé ! On extrait la ligne.`, 'success');
-                await sleep(500);
-                addLog(`Ligne retournée : "${returnedLine.replace(/\n/g, '↵')}"`, 'success');
-                addLog(`Nouveau stash : "${stash.replace(/\n/g, '↵')}"`, 'process');
-                renderStashAndResult(returnedLine);
+        function displayReturnedLine(line) {
+            if (line === null) {
+                returnedLineEl.innerHTML = '<span class="text-yellow-400 font-bold">NULL</span>';
+                returnValueInfoEl.textContent = 'Fin de la lecture.';
+                nextLineBtn.disabled = true;
+            } else if (line === 'ERROR') {
+                 returnedLineEl.innerHTML = '<span class="text-red-500 font-bold">ERROR</span>';
+                 returnValueInfoEl.textContent = 'Une erreur de lecture est survenue.';
+                 nextLineBtn.disabled = true;
             } else {
-                await highlightCodeLine(16);
-                const returnedLine = lineBuffer;
-                stash = '';
-                isFinished = true;
-                addLog("Fin du fichier atteinte. On retourne le reste du stash.", 'success');
-                await sleep(500);
-                addLog(`Ligne retournée : "${returnedLine.replace(/\n/g, '↵')}"`, 'success');
-                addLog(`Le stash est maintenant vide.`, 'process');
-                renderStashAndResult(returnedLine);
-            }
-            
-            await highlightCodeLine(18);
-            await sleep(500);
-            await highlightCodeLine(0, 0); // Clear highlight
-
-            if (!isFinished) {
-                btnGnl.disabled = false;
+                returnedLineEl.textContent = line.replace(/\n/g, '↵\n');
+                returnValueInfoEl.textContent = `Retourne une chaîne de ${line.length} char.`;
             }
         }
 
-        function resetSimulation() {
-            stash = '';
-            readOffset = 0;
-            isFinished = false;
-            gnlCallCount = 0;
-            btnGnl.disabled = false;
 
-            logMessagesEl.innerHTML = '';
-            addLog("Simulateur réinitialisé. Prêt pour un nouvel appel.", "info");
-            
-            renderFileDisplay();
-            renderStashAndResult('');
-            highlightCodeLine(0, 0);
+        // --- Logique de simulation de GNL ---
+        let lastBytesRead = 0;
+
+        function mock_read(bufferSize) {
+            if (readPosition >= fileText.length) {
+                return ''; // EOF
+            }
+            const chunk = fileText.substring(readPosition, readPosition + bufferSize);
+            readPosition += chunk.length;
+            lastBytesRead = chunk.length;
+            return chunk;
         }
 
-        function loadScenario(name) {
-            const scenario = scenarios[name];
-            if (scenario) {
-                textContentEl.value = scenario.text;
-                bufferSizeEl.value = scenario.buffer;
-                resetSimulation();
+        function getNextLineSimulator() {
+            lastBytesRead = 0;
+            let staticBuffer = staticStorage[currentFd] || '';
+            const bufferSize = parseInt(bufferSizeEl.value, 10);
+            
+            if (isNaN(bufferSize) || bufferSize <= 0) {
+                 alert("BUFFER_SIZE doit être un nombre positif.");
+                 return 'ERROR';
             }
+
+            // Boucle de lecture jusqu'à trouver un \n ou la fin du fichier
+            while (!staticBuffer.includes('\n')) {
+                const chunk = mock_read(bufferSize);
+                if (chunk === '') { // EOF
+                    break;
+                }
+                staticBuffer += chunk;
+            }
+            
+            staticStorage[currentFd] = staticBuffer;
+            updateFileVisualization();
+
+            // Si pas de buffer et lecture finie, on a tout lu.
+            if (staticBuffer === '') {
+                updateStaticVarVisualization();
+                return null;
+            }
+
+            // Extraction de la ligne
+            const newlineIndex = staticBuffer.indexOf('\n');
+            let lineToReturn;
+            let remainingBuffer;
+
+            if (newlineIndex !== -1) {
+                lineToReturn = staticBuffer.substring(0, newlineIndex + 1);
+                remainingBuffer = staticBuffer.substring(newlineIndex + 1);
+            } else {
+                // Pas de \n, mais il reste du texte (dernière ligne)
+                lineToReturn = staticBuffer;
+                remainingBuffer = '';
+            }
+
+            updateStaticVarVisualization(lineToReturn);
+            staticStorage[currentFd] = remainingBuffer;
+            
+            return lineToReturn;
+        }
+        
+        let fd_turn = 0;
+        function handleNextLineClick() {
+            if (testCaseSelector.value === 'multiple_fd') {
+                currentFd = fd_turn;
+                alert(`Appel de GNL pour le fd = ${currentFd}`);
+                fd_turn = (fd_turn + 1) % 2; // Alterne entre 0 et 1
+                // Pour la simplicité, on lit toujours du même fichier source
+                // mais on utilise des buffers statiques différents.
+                // Dans un vrai scénario, chaque fd aurait sa propre position de lecture.
+                // Ici, on réinitialise la position pour simuler une lecture indépendante.
+                if(currentFd === 1) {
+                    // On simule un second fichier identique pour la démo
+                    fileText = "Fichier 2, Ligne A\nFichier 2, Ligne B";
+                    readPosition = 0;
+                } else {
+                    fileText = testCases.multiple_fd;
+                    readPosition = 0;
+                }
+            } else {
+                 currentFd = 0;
+            }
+
+            const line = getNextLineSimulator();
+            displayReturnedLine(line);
+            
+            // On met à jour la visualisation de la statique une dernière fois
+            // pour montrer ce qu'il reste APRES le retour.
+            setTimeout(() => {
+                 updateStaticVarVisualization();
+            }, 100);
         }
 
         // --- Écouteurs d'événements ---
-        btnGnl.addEventListener('click', handleGnlCall);
-        btnReset.addEventListener('click', () => loadScenario('classic'));
+        nextLineBtn.addEventListener('click', handleNextLineClick);
+        resetBtn.addEventListener('click', resetSimulation);
+        testCaseSelector.addEventListener('change', loadTestCase);
         
-        textContentEl.addEventListener('input', resetSimulation);
-        bufferSizeEl.addEventListener('input', resetSimulation);
-        
-        presetButtons.forEach(button => {
-            button.addEventListener('click', () => loadScenario(button.dataset.scenario));
+        // Initialisation
+        window.addEventListener('load', () => {
+            loadTestCase();
         });
 
-        // --- Initialisation ---
-        loadScenario('classic');
-    });
     </script>
 </body>
 </html>
